@@ -1,0 +1,5 @@
+# Скрипты выполняются внутри Linux-контейнера: CRLF ломает bash и sqlplus
+*.sh   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+.env*  text eol=lf

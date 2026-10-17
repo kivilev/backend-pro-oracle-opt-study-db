@@ -1,0 +1,23 @@
+# Учебный стенд курса «Оптимизация Oracle SQL» (Oracle AI Database 26ai Free).
+# Студенту compose не нужен — достаточно одной команды docker run из README.
+# Compose удобен автору: docker compose up -d --build  (локальная сборка и проверка образа).
+services:
+  oracle:
+    image: ${STAND_IMAGE:-ghcr.io/kivilev/oracle-opt-study-db:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${CONTAINER_NAME:-oracle-opt-study-db}
+    environment:
+      STAND_PROFILE: ${STAND_PROFILE:-small}
+    ports:
+      - "127.0.0.1:${ORACLE_PORT:-1521}:1521"   # только localhost: наружу стенд не публикуется
+    volumes:
+      - oracle-opt-study-data:/opt/oracle/oradata
+    shm_size: 1g
+    cpus: 2
+    mem_limit: 3g
+    restart: unless-stopped
+
+volumes:
+  oracle-opt-study-data:
