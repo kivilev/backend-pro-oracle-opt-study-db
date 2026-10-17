@@ -13,6 +13,12 @@ grant debug connect session to student_role;
 grant create view to student_role;
 grant create materialized view to student_role;
 grant create job to student_role;
+-- [stand] нужно ДЗ 2–3 и лекциям: AWR/ASH-отчёты и снимки, трассировка чужих сессий, SPM / SQL Patch / Tuning Advisor
+grant execute on sys.dbms_workload_repository to student_role;
+grant execute on sys.dbms_monitor to student_role;
+grant advisor to student_role;
+grant administer sql management object to student_role;
+grant administer sql tuning set to student_role;
 
 create user kivi identified by booble12 default tablespace users temporary tablespace temp;
 create user hr   identified by booble12 default tablespace users temporary tablespace temp;
