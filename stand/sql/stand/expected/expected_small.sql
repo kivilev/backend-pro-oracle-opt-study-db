@@ -40,9 +40,9 @@ insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct,
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT_DETAIL.NUM_ROWS', '3600000', null, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT_DETAIL.BLOCKS', '16650', 5, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT_DETAIL.LOCKED', 'ALL', null, 'FAIL', null);
-insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'TERRORIST_FLB_I.LEAF_BLOCKS', '46177', 5, 'FAIL', null);
-insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'CLIENT_DATA_FIELD_I.LEAF_BLOCKS', '19489', 5, 'FAIL', null);
-insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT_PK.LEAF_BLOCKS', '2137', 5, 'FAIL', null);
+insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'TERRORIST_FLB_I.LEAF_BLOCKS', '46177', 10, 'FAIL', null);
+insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'CLIENT_DATA_FIELD_I.LEAF_BLOCKS', '19489', 10, 'FAIL', null);
+insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT_PK.LEAF_BLOCKS', '2137', 10, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'STATS', 'PAYMENT.PARTITIONS', '46', null, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'C01', 'PHV', '2354902113', null, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('small', 'ANY', 'C01', 'PLAN', '1:SORT AGGREGATE / 2:INDEX FAST FULL SCAN TERRORIST_FLB_I', null, 'WARN', null);

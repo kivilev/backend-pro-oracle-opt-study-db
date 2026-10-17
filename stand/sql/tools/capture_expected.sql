@@ -6,7 +6,7 @@
 
   Допуски по умолчанию:
     PHV, ROWS, STARTS, DATA.*, NUM_ROWS, LOCKED, PARTITIONS — точное совпадение (FAIL);
-    BUFFERS — 10 % (FAIL), BLOCKS / LEAF_BLOCKS — 5 % (FAIL), BUFFERS_RATIO — 30 % (WARN);
+    BUFFERS и LEAF_BLOCKS — 10 % (FAIL), BLOCKS — 5 % (FAIL), BUFFERS_RATIO — 30 % (WARN);
     PLAN — WARN (дублирует PHV в читаемом виде);
     SQL_ID, DISK_READS, ELAPSED_MS, ELAPSED_RATIO, ENV.* и PARAM.* — не попадают (их задаёт expected_any.sql).
   Если x86 и ARM дают разные значения, снять эталон на обеих и вручную продублировать строки с arch = 'x86_64' / 'aarch64'.
@@ -25,7 +25,9 @@ select 'insert into stand.expected (profile, arch, check_id, metric, exp_value, 
        '''' || replace(act_value, '''', '''''') || ''', ' ||
        nvl(to_char(case
                      when metric = 'BUFFERS' then 10
-                     when metric in ('BLOCKS') or metric like '%.BLOCKS' or metric like '%.LEAF_BLOCKS' then 5
+                     -- листовые блоки индексов, обслуживаемых при загрузке, плавают между установками на ±5–6 %
+                     when metric like '%.LEAF_BLOCKS' then 10
+                     when metric in ('BLOCKS') or metric like '%.BLOCKS' then 5
                      when metric = 'BUFFERS_RATIO' then 30
                    end), 'null') || ', ' ||
        '''' || case when metric in ('PLAN', 'BUFFERS_RATIO') then 'WARN' else 'FAIL' end || ''', null);'
