@@ -18,7 +18,7 @@
 docker run -d --name oracle-opt-study-db -p 127.0.0.1:1521:1521 --shm-size=1g --memory=3g -v oracle-opt-study-data:/opt/oracle/oradata ghcr.io/kivilev/oracle-opt-study-db:latest
 ```
 
-Первый запуск занимает **15–30 минут**: создаётся база и загружаются данные. Следить за ходом:
+Сначала Docker скачает образ (около 3–4 ГБ, зависит от интернета). Сам первый запуск занимает **2–5 минут**: готовая база копируется на ваш диск, и даты платежей подстраиваются под сегодняшний день. Следить за ходом:
 
 ```
 docker logs -f oracle-opt-study-db
@@ -94,8 +94,8 @@ docker volume rm oracle-opt-study-data
 ## 7. Если что-то не так
 
 - **Порт 1521 занят** другой базой: в команде из шага 2 замените `127.0.0.1:1521:1521` на `127.0.0.1:1522:1521` и подключайтесь к порту 1522.
-- **В логе нет `STAND IS READY` дольше часа** или видно `FAILED`: пришлите преподавателю вывод команды
-  `docker exec oracle-opt-study-db cat /opt/oracle/oradata/stand_setup.log`.
+- **В логе нет `STAND IS READY` дольше 15 минут** или видно `ОШИБКА`: пришлите преподавателю вывод команды
+  `docker logs oracle-opt-study-db`.
 - **Проверить, что стенд «правильный»** (до выполнения ДЗ, около 3 минут):
   ```
   docker exec oracle-opt-study-db sqlplus -s kivi/booble12@//localhost:1521/FREEPDB1 @/opt/stand/sql/verify_stand.sql

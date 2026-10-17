@@ -61,7 +61,6 @@ alter system set processes           = 300 scope=spfile;
 alter system set open_cursors        = 500 scope=spfile;
 -- нужен для «шумного соседа»
 alter system set job_queue_processes = 10  scope=spfile;
-alter system set audit_trail         = NONE scope=spfile;
 alter system set deferred_segment_creation = TRUE scope=spfile;
 
 exit
