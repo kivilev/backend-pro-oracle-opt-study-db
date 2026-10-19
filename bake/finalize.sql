@@ -34,11 +34,14 @@ begin
 end;
 /
 
+-- ужатие TEMP только уменьшает образ: если временный сегмент ещё занят (ORA-03297), идём дальше
+whenever sqlerror continue
 alter tablespace temp shrink space keep 64M;
 
 select tablespace_name, round(sum(bytes) / 1048576) mb from dba_data_files group by tablespace_name order by 1;
 
 alter session set container = CDB$ROOT;
 alter tablespace temp shrink space keep 64M;
+whenever sqlerror exit failure
 shutdown immediate
 exit
