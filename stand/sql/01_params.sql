@@ -42,8 +42,10 @@ alter system set optimizer_dynamic_sampling    = 2        scope=spfile;
 alter system set optimizer_mode                = ALL_ROWS scope=spfile;
 alter system set optimizer_index_cost_adj      = 100      scope=spfile;
 alter system set optimizer_index_caching       = 0        scope=spfile;
--- db_file_multiblock_read_count НЕ задаём: при явном значении CBO начинает учитывать его в стоимости
--- (иначе 8), и планы разойдутся с VPS курса. Фактический MBRC выводится из db_cache_size, а он у нас фиксирован.
+-- Как на VPS курса (трейс 10053: db_file_multiblock_read_count = 4, _db_file_optimizer_read_count = 4):
+-- FTS читает по 4 блока за вызов, и CBO считает стоимость с тем же MBRC => планы как на VPS
+-- (запросы по CLIENT_DATA идут через INDEX RANGE SCAN CLIENT_DATA_FIELD_I, а не HASH JOIN двух FTS).
+alter system set db_file_multiblock_read_count = 4 scope=spfile;
 
 -- Диагностика (EE): AWR / ASH / SQL Monitor нужны урокам 2–3
 alter system set statistics_level               = TYPICAL scope=spfile;

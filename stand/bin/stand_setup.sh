@@ -18,7 +18,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8   # иначе кириллица в �
 mkdir -p "$MARK_DIR" "$LOG_DIR"
 
 case "$PROFILE" in
-  small) CLIENTS=1000000; TERRORISTS=5000000; PASSPORTS=4000000; PAY_PER_DAY=20000;  DAYS=45 ;;
+  small) CLIENTS=2000000; TERRORISTS=5000000; PASSPORTS=4000000; PAY_PER_DAY=50000;  DAYS=45 ;;
   mini)  CLIENTS=100000;  TERRORISTS=500000;  PASSPORTS=400000;  PAY_PER_DAY=2500;   DAYS=45 ;;  # для отладки стенда
   full)  CLIENTS=4000000; TERRORISTS=5000000; PASSPORTS=4000000; PAY_PER_DAY=100000; DAYS=45 ;;
   *) echo "STAND: unknown STAND_PROFILE=$PROFILE (mini|small|full)"; exit 1 ;;
@@ -116,6 +116,7 @@ log "clients=$CLIENTS terrorists=$TERRORISTS passports=$PASSPORTS payments/day=$
 step 10_params      sys_sql "$SQL/01_params.sql"
 step 15_restart     restart_db
 step 20_maintenance sys_sql "$SQL/02_maintenance_off.sql" "$PDB"
+rm -f /opt/oracle/oradata/FREE/redo01.log /opt/oracle/oradata/FREE/redo02.log  # группы 1–2 удалены в 02_maintenance_off.sql
 step 30_users       sys_sql "$SQL/03_users.sql" "$PDB"
 step 40_kivi        kivi_objects
 step 50_hr          bash -c "cd '$SQL/install/hr' && echo exit | sqlplus -s -l / as sysdba @hr_install.sql '$PDB'"

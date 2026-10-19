@@ -1063,6 +1063,15 @@ begin
                         p.pdate || ',''yyyymmdd'')) update global indexes';
     end loop;
   end if;
+
+  -- [stand] секции PAYMENT_DETAIL тоже удаляем, иначе таблица растёт весь курс
+  for p in (select to_char(trunc(payment_create_dtime), 'yyyymmdd') pdate
+              from payment_detail t
+             where t.payment_create_dtime < trunc(sysdate - c_days_left)
+             group by trunc(payment_create_dtime)) loop
+    execute immediate 'alter table payment_detail drop partition for(to_date(' ||
+                      p.pdate || ',''yyyymmdd'')) update global indexes';
+  end loop;
 end;
 /
 
@@ -1070,11 +1079,24 @@ prompt
 prompt Creating procedure FILL_PAYMENTS
 prompt ================================
 prompt
+/*
+  [stand] Отличия от курса:
+   - норма платежей в день берётся из stand.config (PAY_PER_DAY профиля), а не 100 000;
+   - за один запуск день добирается до нормы целиком (пачками по 5 000), а не на 5 000 в час;
+   - обычный insert вместо insert с хинтом append: append пачками раздувает секции;
+   - «новые» (status = 0) — только за сегодня; новые платежи прошлых дней считаются обработанными (0 -> 1),
+     иначе через несколько дней они есть в каждой секции и кейс финала (PARTITION RANGE ALL) пропадает;
+   - статистика kivi заблокирована, поэтому по дополненным секциям собираем её с force => true.
+*/
 create or replace procedure fill_payments is
   c_one_time_limit    constant number(10) := 5000;
-  c_max_payment_count constant number(10) := 100000;
+  c_max_payment_count number(10) := 100000;
   v_current_payment_count number(38);
   c_days_left constant number(3) := 45;
+  v_today     constant date := trunc(sysdate);
+  v_batch     number(10);
+  v_part      user_objects.subobject_name%type;
+  v_det_part  user_objects.subobject_name%type;
 
   v_payment_ids   t_number_array;
   v_data_value    payment_detail.field_value%type;
@@ -1083,7 +1105,26 @@ create or replace procedure fill_payments is
 
   v_client_id_min client.client_id%type;
   v_client_id_max client.client_id%type;
+  v_clients t_number_array; -- [stand] выборка существующих client_id
+  v_pairs   t_number_pair_array := t_number_pair_array();
+  v_lo      pls_integer;
+  v_hi      pls_integer;
 begin
+  -- [stand] норма из профиля; stand создаётся после kivi, поэтому динамический SQL (иначе процедура INVALID)
+  begin
+    execute immediate q'[select to_number(value) from stand.config where param = 'PAY_PER_DAY']'
+      into c_max_payment_count;
+  exception
+    when others then
+      null; -- нет stand.config: норма курса 100 000
+  end;
+
+  common_pack.enable_manual_changes;
+
+  -- [stand] в курсе отправитель и получатель берутся случайно в диапазоне [min, max] двух клиентов.
+  -- Если в client_id есть дыры (студент удалял клиентов), такой id нарушает FK. Берём случайные id
+  -- из отсортированной выборки существующих клиентов, но тоже в «диапазоне» двух случайных — распределение как в курсе.
+  select client_id bulk collect into v_clients from client sample(1) order by client_id;
 
   <<days_loop>>
   for dd in (with dth as
@@ -1103,33 +1144,34 @@ begin
                    on t.dt = dth.dt) loop
   
     v_current_payment_count := dd.payment_count;
-  
-    if v_current_payment_count < c_max_payment_count then
-      begin
-        select min(client_id)
-              ,max(client_id)
-          into v_client_id_min
-              ,v_client_id_max
-          from (select client_id
-                  from client sample(1)
-                 order by dbms_random.value())
-         where rownum <= 2;
-      
+    v_part := null;
+
+    -- [stand] while вместо if: день добирается до нормы за один запуск
+    while v_current_payment_count < c_max_payment_count loop
+        v_batch := least(c_max_payment_count - v_current_payment_count, c_one_time_limit);
+
+        v_lo := trunc(dbms_random.value(1, v_clients.count + 1));
+        v_hi := trunc(dbms_random.value(1, v_clients.count + 1));
+        v_client_id_min := least(v_lo, v_hi);
+        v_client_id_max := greatest(v_lo, v_hi);
+
         select payment_seq.nextval
           bulk collect
           into v_payment_ids
           from dual
-        connect by level <=
-                   least((c_max_payment_count - v_current_payment_count),
-                         c_one_time_limit);
-      
+        connect by level <= v_batch;
+
+        v_pairs.delete;
+        v_pairs.extend(v_batch);
+        for i in 1 .. v_batch loop
+          v_pairs(i) := t_number_pair(v_clients(trunc(dbms_random.value(v_client_id_min, v_client_id_max + 1))),
+                                      v_clients(trunc(dbms_random.value(v_client_id_min, v_client_id_max + 1))));
+        end loop;
+
         v_payment_dtime := dd.payment_day + dbms_random.value(1, 24) / 24;
-      
-        common_pack.enable_manual_changes;
-      
+
         -- payment
-        insert /*+ append */
-        into payment
+        insert into payment
           (payment_id
           ,create_dtime
           ,summa
@@ -1138,20 +1180,23 @@ begin
           ,to_client_id
           ,status_change_reason
           ,status)
-          select value(t)
+          select t.id
                 ,v_payment_dtime create_dtime
                 ,round(dbms_random.value(0, 1000), 2) summa
                 ,840
-                ,trunc(dbms_random.value(v_client_id_min, v_client_id_max)) from_client_id
-                ,trunc(dbms_random.value(v_client_id_min, v_client_id_max)) to_client_id
-                ,decode(mod(rownum, 10), 1, 'reason', 2, 'reason', null) status_change_reason
-                ,decode(mod(rownum, 10), 0, 0, 1, 2, 2, 3, 1) status
-            from table(v_payment_ids) t;
-      
+                ,c.from_client_id
+                ,c.to_client_id
+                ,decode(mod(t.rn, 10), 1, 'reason', 2, 'reason', null) status_change_reason
+                -- [stand] status = 0 только у сегодняшних платежей
+                ,case when dd.payment_day = v_today then decode(mod(t.rn, 10), 0, 0, 1, 2, 2, 3, 1)
+                      else decode(mod(t.rn, 10), 1, 2, 2, 3, 1) end status
+            from (select value(t) id, rownum rn from table(v_payment_ids) t) t
+            join (select value(c).first from_client_id, value(c).second to_client_id, rownum rn from table(v_pairs) c) c
+              on c.rn = t.rn;
+
         -- payment_detail
         v_data_value := dbms_random.string(opt => 'A', len => 10);
-        insert /*+ append */
-        into payment_detail
+        insert into payment_detail
           (payment_id
           ,payment_create_dtime
           ,field_id
@@ -1162,17 +1207,39 @@ begin
                 ,v_data_value
             from table(v_payment_ids) p
            cross join table(v_field_ids) pd;
-      
+
         commit;
-      
-      exception
-        when others then
-          dbms_output.put_line('Error: ' || sqlerrm);
-      end;
+        v_current_payment_count := v_current_payment_count + v_batch;
+
+        if v_part is null then
+          select uo.subobject_name into v_part
+            from payment p
+            join user_objects uo on uo.data_object_id = dbms_rowid.rowid_object(p.rowid)
+           where p.payment_id = v_payment_ids(1);
+          select uo.subobject_name into v_det_part
+            from payment_detail d
+            join user_objects uo on uo.data_object_id = dbms_rowid.rowid_object(d.rowid)
+           where d.payment_create_dtime = v_payment_dtime
+             and d.payment_id = v_payment_ids(1)
+             and d.field_id = 1;
+        end if;
+    end loop;
+
+    -- [stand] статистика по дополненной секции (у таблицы она заблокирована)
+    if v_part is not null then
+      dbms_stats.gather_table_stats(user, 'PAYMENT', partname => v_part, granularity => 'PARTITION', force => true);
+      dbms_stats.gather_table_stats(user, 'PAYMENT_DETAIL', partname => v_det_part, granularity => 'PARTITION', force => true);
     end if;
-  
+
   end loop days_loop;
 
+  -- [stand] новые платежи прошлых дней «обработаны»: status = 0 остаётся только за сегодня
+  update payment p
+     set p.status = 1
+   where p.status = 0
+     and p.create_dtime >= v_today - c_days_left
+     and p.create_dtime < v_today;
+  commit;
 end;
 /
 
@@ -2573,7 +2640,7 @@ begin
                                 repeat_interval     => 'freq=hourly; byminute=0',
                                 end_date            => to_date(null),
                                 job_class           => 'DEFAULT_JOB_CLASS',
-                                enabled             => false, -- [stand] jobs are disabled for determinism
+                                enabled             => false, -- [stand] включаются при старте контейнера (startdb/01_stand_start.sh), не во время установки
                                 auto_drop           => false,
                                 comments            => 'Clear payments every hour');
 end;
@@ -2586,7 +2653,7 @@ begin
                                 repeat_interval     => 'freq=hourly; byminute=0',
                                 end_date            => to_date(null),
                                 job_class           => 'DEFAULT_JOB_CLASS',
-                                enabled             => false, -- [stand] jobs are disabled for determinism
+                                enabled             => false, -- [stand] включаются при старте контейнера (startdb/01_stand_start.sh), не во время установки
                                 auto_drop           => false,
                                 comments            => 'Fill payments every hour');
 end;

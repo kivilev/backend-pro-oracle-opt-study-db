@@ -21,5 +21,13 @@ else
       tail -20 "$LOG"
     fi
   fi
+  # Каждый старт: догоняем окно платежей до сегодняшней даты и включаем джобы платежей (дальше они работают раз в час)
+  CATCHUP_LOG=/opt/oracle/oradata/stand_logs/payments_catchup.log
+  echo "STAND: обновляю платежи до сегодняшней даты..."
+  mkdir -p "$(dirname "$CATCHUP_LOG")"
+  if ! (cd /opt/stand/sql/tools && sqlplus -s -l "kivi/booble12@//localhost:1521/${PDB}" @payments_catchup.sql) > "$CATCHUP_LOG" 2>&1; then
+    echo "STAND: ОШИБКА при обновлении платежей, см. $CATCHUP_LOG"
+    tail -20 "$CATCHUP_LOG"
+  fi
   echo "STAND IS READY. Подключение: kivi/booble12@//localhost:1521/${PDB}"
 fi

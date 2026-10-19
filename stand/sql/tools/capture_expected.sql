@@ -8,6 +8,7 @@
     PHV, ROWS, STARTS, DATA.*, NUM_ROWS, LOCKED, PARTITIONS — точное совпадение (FAIL);
     BUFFERS и LEAF_BLOCKS — 10 % (FAIL), BLOCKS — 5 % (FAIL), BUFFERS_RATIO — 30 % (WARN);
     PLAN — WARN (дублирует PHV в читаемом виде);
+    PAYMENT*, PAYMENT_DETAIL*, PAYMENT_PK* (кроме LOCKED) — WARN, строки и блоки 5 %, HASH — INFO: их каждый час меняют джобы платежей;
     SQL_ID, DISK_READS, ELAPSED_MS, ELAPSED_RATIO, ENV.* и PARAM.* — не попадают (их задаёт expected_any.sql).
   Если x86 и ARM дают разные значения, снять эталон на обеих и вручную продублировать строки с arch = 'x86_64' / 'aarch64'.
 */
@@ -24,13 +25,19 @@ select 'insert into stand.expected (profile, arch, check_id, metric, exp_value, 
        '''' || check_id || ''', ''' || metric || ''', ' ||
        '''' || replace(act_value, '''', '''''') || ''', ' ||
        nvl(to_char(case
+                     -- платежи каждый час меняют FILL_PAYMENT_JOB / CLEAR_PAYMENTS_JOB
+                     when metric like 'PAYMENT%.HASH' then null
+                     when metric like 'PAYMENT%' and metric not like '%.LOCKED'
+                          and (metric like '%ROWS' or metric like '%BLOCKS') then 5
                      when metric = 'BUFFERS' then 10
                      -- листовые блоки индексов, обслуживаемых при загрузке, плавают между установками на ±5–6 %
                      when metric like '%.LEAF_BLOCKS' then 10
                      when metric in ('BLOCKS') or metric like '%.BLOCKS' then 5
                      when metric = 'BUFFERS_RATIO' then 30
                    end), 'null') || ', ' ||
-       '''' || case when metric in ('PLAN', 'BUFFERS_RATIO') then 'WARN' else 'FAIL' end || ''', null);'
+       '''' || case when metric like 'PAYMENT%.HASH' then 'INFO'
+                    when metric like 'PAYMENT%' and metric not like '%.LOCKED' then 'WARN'
+                    when metric in ('PLAN', 'BUFFERS_RATIO') then 'WARN' else 'FAIL' end || ''', null);'
   from stand.result
  where run_id = (select max(run_id) from stand.result)
    and check_id not in ('ENV', 'PARAM')

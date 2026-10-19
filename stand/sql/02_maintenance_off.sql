@@ -12,6 +12,30 @@ begin
 end;
 /
 
+-- Redo: в образе gvenzl 2 группы по 20 МБ. На массовых вставках (загрузка, джобы платежей) база постоянно ждёт
+-- "Checkpoint not complete". Ставим 3 группы по 100 МБ, старые удаляем.
+declare
+  v_cnt number;
+begin
+  for g in 3 .. 5 loop
+    select count(*) into v_cnt from v$log where group# = g;
+    if v_cnt = 0 then
+      execute immediate 'alter database add logfile group ' || g ||
+                        ' (''/opt/oracle/oradata/FREE/redo0' || g || '.log'') size 100m reuse';
+    end if;
+  end loop;
+  for i in 1 .. 20 loop
+    select count(*) into v_cnt from v$log where group# in (1, 2) and status in ('CURRENT', 'ACTIVE');
+    exit when v_cnt = 0;
+    execute immediate 'alter system switch logfile';
+    execute immediate 'alter system checkpoint';
+  end loop;
+  for g in (select group# from v$log where group# in (1, 2)) loop
+    execute immediate 'alter database drop logfile group ' || g.group#;
+  end loop;
+end;
+/
+
 alter session set container = &&1;
 
 begin

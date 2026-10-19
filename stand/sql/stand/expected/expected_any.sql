@@ -7,7 +7,7 @@ insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct,
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'ENV', 'CPUSPEEDNW', '2000', null, 'FAIL', 'системная статистика зафиксирована');
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'ENV', 'FIX_CONTROLS_ON', null, null, 'INFO', 'различается между 19.3 и 19.19 — смотреть при расхождении планов');
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'ENV', 'INVALID_OBJECTS', '0', null, 'FAIL', null);
-insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'ENV', 'KIVI_JOBS_ENABLED', '0', null, 'WARN', 'fill/clear payments и шумный сосед выключены');
+insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'ENV', 'KIVI_JOBS_ENABLED', '2', null, 'WARN', 'включены FILL_PAYMENT_JOB и CLEAR_PAYMENTS_JOB, шумный сосед выключен');
 
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'OPTIMIZER_FEATURES_ENABLE', '19.1.0', null, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'OPTIMIZER_ADAPTIVE_PLANS', 'TRUE', null, 'FAIL', null);

@@ -2,11 +2,13 @@
   «Освежить» платежи: пересоздать PAYMENT / PAYMENT_DETAIL относительно сегодняшней даты тем же seed,
   пересобрать и заблокировать их статистику. Нужен, если стенд живёт дольше нескольких дней:
   запросы пакетов работают от sysdate (последние 30/45 дней), и со временем данные «уезжают» в прошлое.
-  Запуск под kivi:
-    docker exec -it oracle-stand bash -c "cd /opt/stand/sql/install/kivi/fill && sqlplus -s kivi/booble12@//localhost:1521/ORCLPDB1 @/opt/stand/sql/tools/reset_payments.sql"
+  Запуск под kivi, обязательно из каталога tools (скрипт генерации подключается относительным путём @@../install/...):
+    docker exec -it oracle-opt-study-db bash -c "cd /opt/stand/sql/tools && sqlplus -s kivi/booble12@//localhost:1521/FREEPDB1 @reset_payments.sql"
   ВНИМАНИЕ: удаляет все платежи (в т.ч. обработанные студентом в финальной работе).
+  Пока скрипт работает, джобы платежей выключены; в конце они включаются снова.
 */
 whenever sqlerror exit failure
+whenever oserror exit failure
 set serveroutput on verify off
 column c new_value v_clients noprint
 column p new_value v_ppd noprint
@@ -17,6 +19,12 @@ select max(case when param = 'CLIENTS' then value end) c,
        max(case when param = 'DAYS' then value end) d,
        max(case when param = 'SEED' then value end) s
   from stand.config;
+
+begin
+  dbms_scheduler.disable('FILL_PAYMENT_JOB', force => true);
+  dbms_scheduler.disable('CLEAR_PAYMENTS_JOB', force => true);
+end;
+/
 
 exec dbms_stats.unlock_table_stats(user, 'PAYMENT')
 exec dbms_stats.unlock_table_stats(user, 'PAYMENT_DETAIL')
@@ -44,6 +52,8 @@ begin
     dbms_stats.gather_table_stats(user, t.table_name, cascade => true, no_invalidate => false);
     dbms_stats.lock_table_stats(user, t.table_name);
   end loop;
+  dbms_scheduler.enable('FILL_PAYMENT_JOB');
+  dbms_scheduler.enable('CLEAR_PAYMENTS_JOB');
 end;
 /
 prompt Платежи пересозданы относительно trunc(sysdate). Проверка: @/opt/stand/sql/verify_stand.sql

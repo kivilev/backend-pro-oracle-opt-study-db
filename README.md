@@ -15,8 +15,11 @@
 Откройте терминал (Windows — PowerShell, Mac — Terminal) и выполните:
 
 ```
-docker run -d --name oracle-opt-study-db -p 127.0.0.1:1521:1521 --shm-size=1g --memory=3g -v oracle-opt-study-data:/opt/oracle/oradata ghcr.io/kivilev/oracle-opt-study-db:latest
+docker run -d --name oracle-opt-study-db -p 127.0.0.1:1521:1521 --cpus=2 --shm-size=1g --memory=3g -v oracle-opt-study-data:/opt/oracle/oradata ghcr.io/kivilev/oracle-opt-study-db:latest
 ```
+
+`--cpus=2` обязателен: Oracle Free использует 2 ядра, и с этим лимитом время запросов (и упражнение с «шумным соседом») одинаково у всех.
+Не подключайте каталог трейсов к папке Windows/Mac через `-v`: запись трейса на диск хоста замедляет трассируемую сессию в разы. Трейсы забирайте `docker cp` (раздел 5).
 
 Сначала Docker скачает образ (около 3–4 ГБ, зависит от интернета). Сам первый запуск занимает **2–5 минут**: готовая база копируется на ваш диск, и даты платежей подстраиваются под сегодняшний день. Следить за ходом:
 
