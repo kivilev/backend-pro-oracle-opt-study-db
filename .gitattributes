@@ -3,3 +3,5 @@
 *.sql  text eol=lf
 *.yml  text eol=lf
 .env*  text eol=lf
+sshd_config text eol=lf
+bashrc      text eol=lf
