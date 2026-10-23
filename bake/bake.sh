@@ -22,14 +22,16 @@ echo "== 2/5 установка стенда (профиль $PROFILE), без �
 docker run -d --name "$NAME" --shm-size=1g --memory=3g \
   -e STAND_PROFILE="$PROFILE" -e STAND_BAKING=1 "$INSTALLER" >/dev/null
 
-until docker logs "$NAME" 2>&1 | grep -qE "STAND IS READY|STAND: .*FAILED|FAILED [0-9]"; do
+# grep без -q: с -q он выходит на первом совпадении, docker logs получает SIGPIPE,
+# и при pipefail проверка «проваливается» на длинном логе, хотя строка в нём есть
+until docker logs "$NAME" 2>&1 | grep -E "STAND IS READY|STAND: .*FAILED|FAILED [0-9]" > /dev/null; do
   if ! docker ps -q --filter "name=$NAME" | grep -q .; then
     echo "контейнер остановился"; docker logs --tail 50 "$NAME"; exit 1
   fi
   sleep 20
 done
 docker logs "$NAME" 2>&1 | grep -E "^STAND" | tail -15
-docker logs "$NAME" 2>&1 | grep -q "STAND CHECK PASSED" || { echo "самопроверка не прошла — образ не запекаем"; exit 1; }
+docker logs "$NAME" 2>&1 | grep "STAND CHECK PASSED" > /dev/null || { echo "самопроверка не прошла — образ не запекаем"; exit 1; }
 
 echo "== 3/5 финализация: UNDO/TEMP, остановка БД"
 docker cp "$HERE/bake/finalize.sql" "$NAME:/tmp/finalize.sql"
