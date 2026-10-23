@@ -50,6 +50,10 @@ alter system set db_file_multiblock_read_count = 4 scope=spfile;
 -- Диагностика (EE): AWR / ASH / SQL Monitor нужны урокам 2–3
 alter system set statistics_level               = TYPICAL scope=spfile;
 alter system set control_management_pack_access = 'DIAGNOSTIC+TUNING' scope=spfile;
+-- В 26ai Free по умолчанию 32M, и трейс режется на сегменты по max_dump_file_size / _uts_trace_segments (5) = 6,4 МБ:
+-- *_1.trc, *_2.trc…, а сверх 32 МБ средние сегменты удаляются. Трейс ДЗ 1 с level 12 — около 7,5 МБ.
+-- UNLIMITED (как по умолчанию в 19c) — один файл на сессию.
+alter system set max_dump_file_size             = UNLIMITED scope=spfile;
 
 -- Resource Manager в Free недоступен (v$option) — планы окон обслуживания CPU не режут.
 

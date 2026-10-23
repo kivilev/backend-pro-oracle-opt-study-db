@@ -21,6 +21,11 @@ else
       tail -20 "$LOG"
     fi
   fi
+  # Каждый старт: один трейс на сессию. spfile лежит в томе, поэтому у стендов, созданных до правки 01_params.sql,
+  # остаётся default 26ai Free (32M) — трейс режется на *_1.trc, *_2.trc, а get-trace берёт только последний кусок.
+  if ! printf 'whenever sqlerror exit failure\nalter system set max_dump_file_size = UNLIMITED scope=both;\n' | sqlplus -s -l / as sysdba > /dev/null 2>&1; then
+    echo "STAND: не удалось выставить max_dump_file_size = UNLIMITED"
+  fi
   # Каждый старт: догоняем окно платежей до сегодняшней даты и включаем джобы платежей (дальше они работают раз в час)
   CATCHUP_LOG=/opt/oracle/oradata/stand_logs/payments_catchup.log
   echo "STAND: обновляю платежи до сегодняшней даты..."
