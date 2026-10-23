@@ -52,6 +52,8 @@ restart_db() {
 whenever sqlerror exit failure
 shutdown immediate
 startup
+-- Free при каждом старте экземпляра ставит max_dump_file_size = 32M (spfile не помогает): см. startdb/01_stand_start.sh
+alter system set max_dump_file_size = UNLIMITED scope=memory;
 whenever sqlerror continue
 alter pluggable database all open;
 exit

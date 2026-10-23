@@ -31,7 +31,24 @@ until docker logs "$NAME" 2>&1 | grep -E "STAND IS READY|STAND: .*FAILED|FAILED 
   sleep 20
 done
 docker logs "$NAME" 2>&1 | grep -E "^STAND" | tail -15
-docker logs "$NAME" 2>&1 | grep "STAND CHECK PASSED" > /dev/null || { echo "самопроверка не прошла — образ не запекаем"; exit 1; }
+if ! docker logs "$NAME" 2>&1 | grep "STAND CHECK PASSED" > /dev/null; then
+  echo "самопроверка не прошла — образ не запекаем. Расхождения с эталоном:"
+  # 90_verify.log остаётся в контейнере, который удалит cleanup: выводим строки FAIL/WARN в лог CI
+  docker exec -i "$NAME" bash -c "sqlplus -s / as sysdba" <<'SQL' || true
+alter session set container = FREEPDB1;
+set linesize 300 pagesize 100 feedback off
+column check_id  format a14
+column metric    format a32
+column act_value format a50
+column exp_value format a50
+select check_id, metric, act_value, exp_value, status
+  from stand.result
+ where run_id = (select max(run_id) from stand.result)
+   and status in ('FAIL', 'WARN')
+ order by seq;
+SQL
+  exit 1
+fi
 
 echo "== 3/5 финализация: UNDO/TEMP, остановка БД"
 docker cp "$HERE/bake/finalize.sql" "$NAME:/tmp/finalize.sql"
