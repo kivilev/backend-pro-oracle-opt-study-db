@@ -12,6 +12,7 @@ services:
       STAND_PROFILE: ${STAND_PROFILE:-small}
     ports:
       - "127.0.0.1:${ORACLE_PORT:-1521}:1521"   # только localhost: наружу стенд не публикуется
+      - "127.0.0.1:${SSH_PORT:-2222}:2222"      # SSH/SFTP под oracle, тоже только localhost
     volumes:
       - oracle-opt-study-data:/opt/oracle/oradata
     shm_size: 1g

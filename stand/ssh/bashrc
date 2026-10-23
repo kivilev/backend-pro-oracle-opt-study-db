@@ -1,0 +1,3 @@
+# ~/.bashrc пользователя oracle: окружение Oracle и в неинтерактивных SSH-командах
+# (ssh oracle@localhost -p 2222 'команда', терминал WinSCP). Логин-шелл берёт его из ~/.bash_profile.
+[ -z "${ORACLE_HOME:-}" ] && [ -f ~/.bash_profile ] && . ~/.bash_profile
