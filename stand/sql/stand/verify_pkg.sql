@@ -123,7 +123,7 @@ create or replace package body stand.verify is
                               'pga_aggregate_target', 'db_block_size',
                               'db_file_multiblock_read_count', 'statistics_level', 'control_management_pack_access',
                               'job_queue_processes', 'processes',
-                              'filesystemio_options');
+                              'filesystemio_options', 'max_dump_file_size');
   begin
     put('ENV', 'VERSION',  q1('select version_full from v$instance'));
     put('ENV', 'PLATFORM', q1('select platform_name from v$database'));

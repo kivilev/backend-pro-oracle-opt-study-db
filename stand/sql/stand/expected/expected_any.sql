@@ -27,4 +27,5 @@ insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct,
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'STATISTICS_LEVEL', 'TYPICAL', null, 'FAIL', null);
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'CONTROL_MANAGEMENT_PACK_ACCESS', 'DIAGNOSTIC+TUNING', null, 'WARN', 'нужно для AWR/ASH/SQL Monitor');
 insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'FILESYSTEMIO_OPTIONS', 'SETALL', null, 'WARN', 'прямой I/O: физические чтения действительно с диска');
+insert into stand.expected (profile, arch, check_id, metric, exp_value, tol_pct, severity, note) values ('ANY', 'ANY', 'PARAM', 'MAX_DUMP_FILE_SIZE', 'UNLIMITED', null, 'FAIL', 'иначе трейс режется на *_1.trc, *_2.trc, а сверх лимита теряется');
 commit;
